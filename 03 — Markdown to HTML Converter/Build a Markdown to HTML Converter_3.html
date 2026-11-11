@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to HTML Converter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        body > h1 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        #container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            justify-content: center;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        .container h2 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+
+        textarea#markdown-input {
+            width: 100%;
+            height: 350px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.95rem;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea#markdown-input:focus {
+            border-color: #3498db;
+        }
+
+        #html-output, #preview {
+            width: 100%;
+            height: 350px;
+            padding: 12px;
+            border: 1px solid #e1e1e1;
+            border-radius: 4px;
+            background-color: #fafafa;
+            overflow-y: auto;
+            font-size: 0.95rem;
+        }
+
+        #html-output {
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Markdown to HTML Converter</h1>
+    <div id="container">
+        <div class="container">
+            <h2>Markdown Input:</h2>
+            <textarea id="markdown-input" placeholder="Enter your markdown here..."></textarea>
+        </div>
+        <div class="container">
+            <h2>Raw HTML Output:</h2>
+            <div id="html-output"></div>
+        </div>
+        <div class="container">
+            <h2>HTML Preview:</h2>
+            <div id="preview"></div>
+        </div>
+    </div>
+
+    <script>
+        function convertMarkdown() {
+            const input = document.getElementById('markdown-input').value;
+            const lines = input.split('\n');
+            let htmlResult = '';
+
+            for (let line of lines) {
+                function parseInline(text) {
+                    // 1. Images & Links
+                    text = text.replace(/!\[([^\]]+)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">');
+                    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+                    
+                    // 2. Bold text handling potential nested italic elements (*...* or _..._)
+                    text = text.replace(/\*\*([^*]+|\*[^*]+\*)*\*\*/g, (match) => {
+                        let inner = match.slice(2, -2);
+                        inner = inner.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+                        return `<strong>${inner}</strong>`;
+                    });
+                    text = text.replace(/__([^_]+|_[^_]+_)*__/g, (match) => {
+                        let inner = match.slice(2, -2);
+                        inner = inner.replace(/_([^_]+)_/g, '<em>$1</em>');
+                        return `<strong>${inner}</strong>`;
+                    });
+
+                    // 3. Standalone Italic text
+                    text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+                    text = text.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+                    return text;
+                }
+
+                // Block elements matching anchors at the start of lines
+                if (/^#{3}\s+(.*)/.test(line)) {
+                    line = line.replace(/^#{3}\s+(.*)/, (match, p1) => `<h3>${parseInline(p1)}</h3>`);
+                } else if (/^#{2}\s+(.*)/.test(line)) {
+                    line = line.replace(/^#{2}\s+(.*)/, (match, p1) => `<h2>${parseInline(p1)}</h2>`);
+                } else if (/^#\s+(.*)/.test(line)) {
+                    line = line.replace(/^#\s+(.*)/, (match, p1) => `<h1>${parseInline(p1)}</h1>`);
+                } else if (/^>\s+(.*)/.test(line)) {
+                    line = line.replace(/^>\s+(.*)/, (match, p1) => `<blockquote>${parseInline(p1)}</blockquote>`);
+                } else {
+                    line = parseInline(line);
+                }
+
+                htmlResult += line;
+            }
+
+            return htmlResult;
+        }
+
+        document.getElementById('markdown-input').addEventListener('input', () => {
+            const converted = convertMarkdown();
+            document.getElementById('html-output').textContent = converted;
+            document.getElementById('preview').innerHTML = converted;
+        });
+    </script>
+</body>
+
+</html>
